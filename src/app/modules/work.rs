@@ -7,22 +7,12 @@ use crate::*;
 
 use thiserror::Error;
 
-macro_rules! const_partial_eq {
-    ($id:ident) => {
-        impl const std::cmp::PartialEq for $id {
-            fn eq(&self, other: &Self) -> bool {
-                (*self as u8) == (*other as u8)
-            }
-        }
-    };
-}
-
 /// Enum representing the category fo data that a [`WorkId`] refers to. This field
 /// determines where data is stored. [`WorkKind::Transition`] and [`WorkKind::TransitionGroup`]
 /// are not checked by any calls to the [`WorkModule`] accessors, however [`WorkKind::Instance`]
 /// and [`WorkKind::Status`] are used.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum WorkKind {
     Instance = 0x0,
     Status = 0x1,
@@ -31,8 +21,6 @@ pub enum WorkKind {
 
     None = 0xFF,
 }
-
-const_partial_eq!(WorkKind);
 
 impl From<u8> for WorkKind {
     fn from(arg: u8) -> Self {
@@ -50,7 +38,7 @@ impl From<u8> for WorkKind {
 /// has no impact on where the data is stored, and is not check by any calls to the
 /// [`WorkModule`] accessors.
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq)]
+#[derive(Debug, Copy, Clone)]
 pub enum WorkType {
     Float = 0x0,
     Int = 0x1,
@@ -58,8 +46,6 @@ pub enum WorkType {
 
     None = 0xFF,
 }
-
-const_partial_eq!(WorkType);
 
 impl From<u8> for WorkType {
     fn from(arg: u8) -> Self {
@@ -84,10 +70,10 @@ pub struct WorkId(u32);
 
 impl WorkId {
     pub(crate) const fn from_parts(ty: WorkType, kind: WorkKind, index: u32) -> Self {
-        if ty == WorkType::None {
+        if (ty as u8) == (WorkType::None as u8) {
             panic!("WorkType cannot be None");
         }
-        if kind == WorkKind::None {
+        if (kind as u8) == (WorkKind::None as u8) {
             panic!("WorkKind cannot be None");
         }
 
@@ -133,7 +119,7 @@ impl TryFrom<u32> for WorkId {
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         let ty = ((value >> 0x1C) & 0xF) as u8;
         let kind = ((value >> 0x18) & 0xF) as u8;
-        if WorkType::from(ty) == WorkType::None {
+        if ty == WorkType::None as u8 {
             Err(WorkIdTryFromError::InvalidType(ty))
         } else if WorkKind::from(kind) == WorkKind::None {
             Err(WorkIdTryFromError::InvalidKind(kind))
